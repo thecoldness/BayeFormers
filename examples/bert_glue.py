@@ -10,7 +10,8 @@ from transformers import AutoModelForSequenceClassification
 from transformers import GlueDataset
 from transformers import GlueDataTrainingArguments
 from transformers.data.data_collator import default_data_collator as collate
-from transformers.optimization import AdamW
+# from transformers.optimization import AdamW
+from torch.optim import AdamW
 from transformers.optimization import get_linear_schedule_with_warmup
 from tqdm import tqdm
 from typing import Dict
@@ -317,7 +318,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_name",    type=str,   default="distilbert-base-uncased", help="model name")
     parser.add_argument("--task_name",     type=str,   default="MRPC",                    help="task name")
     parser.add_argument("--n_labels",      type=int,   default=2,                         help="number of classes")
-    parser.add_argument("--device",        type=str,   default="cuda:0",                  help="device (cpu, cuda:0, ..., cuda:n)")
+    parser.add_argument("--device",        type=str,   default="cuda:3",                  help="device (cpu, cuda:0, ..., cuda:n)")
 
     args = parser.parse_args()
 
