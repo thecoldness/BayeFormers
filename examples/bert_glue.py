@@ -76,7 +76,7 @@ def sample_bayesian(
 
 def train(EXP: str, MODEL_NAME: str, TASK_NAME: str, N_LABELS: int, DELTA: float, WEIGHT_DECAY: float, DEVICE: str) -> float:
     EPOCHS         = 5
-    BATCH_SIZE     = 8
+    BATCH_SIZE     = 32
     SAMPLES        = 10
     FREEZE         = True
     LOGS           = "logs"
@@ -318,7 +318,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_name",    type=str,   default="distilbert-base-uncased", help="model name")
     parser.add_argument("--task_name",     type=str,   default="MRPC",                    help="task name")
     parser.add_argument("--n_labels",      type=int,   default=2,                         help="number of classes")
-    parser.add_argument("--device",        type=str,   default="cuda:3",                  help="device (cpu, cuda:0, ..., cuda:n)")
+    parser.add_argument("--device",        type=str,   default="cuda:2",                  help="device (cpu, cuda:0, ..., cuda:n)")
 
     args = parser.parse_args()
 
