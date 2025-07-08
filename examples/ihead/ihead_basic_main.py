@@ -16,8 +16,8 @@ from pathlib import Path
 from collections import defaultdict
 
 from dataclasses import dataclass
-from examples.ihead_data import DataArgs, Dataset, ParallelDataLoader
-from examples.ihead_basic_model import ModelArgs, Transformer
+from examples.ihead.ihead_data import DataArgs, Dataset, ParallelDataLoader
+from examples.ihead.ihead_basic_model import ModelArgs, Transformer
 
 @dataclass
 class OptimArgs:
