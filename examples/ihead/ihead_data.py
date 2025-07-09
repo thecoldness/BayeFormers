@@ -23,11 +23,13 @@ class DataArgs:
     output_counter: bool = True
     no_repeat: bool = False
 
-
 class Dataset:
     def __init__(self, args: DataArgs,
                  train_test: Optional[str] = None,
-                 bigram_outs: Optional[bool] = False):
+                 bigram_outs: Optional[bool] = False,
+                 noise_prob: Optional[float] = 0.5,
+                 noise_token_id: Optional[int] = 2,
+                 ):
         self.k = args.k
         self.seq_length = args.seq_length
         self.show_latents = args.show_latents
@@ -35,6 +37,9 @@ class Dataset:
         self.output_counter = args.output_counter
         self.no_repeat = args.no_repeat
         self.bigram_outs = bigram_outs
+
+        self.noise_prob = noise_prob
+        self.noise_token_id = noise_token_id
 
         # init distributions
         self.meta = pickle.load(open('data/meta.pkl', 'rb'))
@@ -87,6 +92,7 @@ class Dataset:
                 pools[i].remove(idx)
         else:
             pools = [self.tok_range for idx in idxs]
+
         if self.train_test is None:
             # outs = [rng.choice(self.tok_range) for idx in idxs]
             if self.bigram_outs:
@@ -114,7 +120,16 @@ class Dataset:
         while len(seq) < self.seq_length + 1:
             last = seq[-1]
             if last in idxs:
-                seq.append(outs[idxs.index(last)])
+                # first is random
+                if self.noise_prob > 0:
+                    random_float = random.uniform(0, 1)
+                    if random_float >= self.noise_prob:
+                        seq.append(outs[idxs.index(last)])
+                    else:
+                        seq.append(self.noise_token_id) # This makes a fixed noise with probability
+                else:
+                    seq.append(outs[idxs.index(last)]) 
+
                 if self.output_counter:
                     cnts[last] = cnts.get(last, 0) + 1
                     outputs_seq.append(cnts[last])
@@ -144,32 +159,6 @@ class Dataset:
         outs = np.array(outs).reshape(batch_size, self.seq_length + 1)
         return x, outs
 
-
-# def iterate_batches(dataset: Dataset,
-#                     batch_size: int = 20,
-#                     num_workers: int = 60,
-#                     seed: int = 42):
-#     def worker(queue, rng):
-#         while True:
-#             x, outs = dataset.gen_batch(rng, batch_size)
-#             queue.put((x, outs))
-
-#     import multiprocessing as mp
-#     q = mp.Queue(maxsize=1000)
-#     processes = [mp.Process(target=worker, args=(q, np.random.default_rng([seed, i]))) for i in range(num_workers)]
-#     for p in processes:
-#         p.start()
-
-#     seq = []
-#     outputs_seq = []
-#     count = 0
-#     try:
-#         while True:
-#             x, outs = q.get()
-#             yield (x[:,:-1], x[:,1:], outs[:,:-1])
-#     except:
-#         for p in processes:
-#             p.kill()
 
 
 import multiprocessing as mp

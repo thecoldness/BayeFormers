@@ -44,7 +44,10 @@ class TrainerArgs:
     bigram_outs_test: bool = False
     num_data_workers: int = 60
     seed: int = 42
-    save_dir: Optional[str] = None
+    load_model: bool = False
+    load_dir: Optional[str] = "./examples/ihead/saved_models/basic_bayesian_transformer.pth"
+    save_model: bool = False
+    save_dir: Optional[str] = "./examples/ihead/saved_models"
     root_dir: str = ''
 
 
@@ -62,7 +65,7 @@ if __name__ == '__main__':
     run = wandb.init(
         entity = "3233822097-peking-university",
         project = "BayeFormers",
-        name = "basic Bayesian transformer with pretrain(var = 0.1)",
+        name = "basic Bayesian transformer with pretrain(var = 0.1 , alpha=0.5)",
         config = OmegaConf.to_container(cfg)
     )
 
@@ -77,14 +80,6 @@ if __name__ == '__main__':
 
     SAMPLES = 10
     EPOCHS = cfg.epoch
-
-    if cfg.save_dir is not None:
-        outdir = Path(cfg.root_dir) / Path(cfg.save_dir)
-        outdir.mkdir(parents=True, exist_ok=True)
-        # save params
-        with open(outdir / 'params.json', 'w') as f:
-                json.dump(dict(cfg), f, sort_keys=True, indent=4)
-        outfile = open(outdir / 'res.jsonl', 'w')
 
     model = Transformer(cfg.model_args)
     model.cuda()
@@ -102,20 +97,6 @@ if __name__ == '__main__':
         for name, p in model.named_parameters():
             if name in to_freeze:
                 p.requires_grad_(False)
-
-    # optim
-    if cfg.optim_args.use_sgd:
-        optimizer = torch.optim.SGD(model.parameters(),
-                lr=cfg.optim_args.learning_rate,
-                weight_decay=cfg.optim_args.weight_decay,
-                momentum=cfg.optim_args.momentum)
-    else:
-        optimizer = torch.optim.AdamW(
-                model.parameters(),
-                lr=cfg.optim_args.learning_rate,
-                weight_decay=cfg.optim_args.weight_decay,
-                betas=(0.9, 0.95),
-                eps=1e-8)
     
     optimizer = torch.optim.Adam(model.parameters() , lr = cfg.optim_args.learning_rate)
 
@@ -129,76 +110,68 @@ if __name__ == '__main__':
     y_t = torch.from_numpy(x_test[:,1:ds.seq_length + 1]).cuda()
     outs_t = torch.from_numpy(out_test[:,:ds.seq_length]).cuda()
 
+    if cfg.load_model:
+        bayesian_model = to_bayesian(model , delta=0.1)
+        bayesian_model.load_state_dict(torch.load(cfg.load_dir))
+        print(f"Successfully loaded model from {cfg.load_dir}")
+        bayesian_model.cuda()
+    else:
+        if cfg.pretrain:
+            for epoch in tqdm(range(100), desc="Epoch"):
+                pbar = tqdm(ParallelDataLoader(ds, batch_size=cfg.optim_args.batch_size,num_workers=cfg.num_data_workers, seed=cfg.seed , max_iters = cfg.max_iters), 
+                    total = cfg.max_iters, 
+                    desc = "Basic Transformer Training...")
+                tot_loss = 0.0
+                tot_nll = 0.0
+                tot_log_prior = 0.0
+                tot_log_variational_posterior = 0.0
+                tot_acc = 0.0
+                tot_acc_start = 0.0
+                tot_acc_end = 0.0
+                tot_acc_bigram = 0.0
+                for (x , y , outs) in pbar:
+                    # print(f"x shape {x.shape} , y shape {y.shape} , outs shape{outs.shape}"
 
-    if cfg.pretrain :
-        for epoch in tqdm(range(100), desc="Epoch"):
-            pbar = tqdm(ParallelDataLoader(ds, batch_size=cfg.optim_args.batch_size,num_workers=cfg.num_data_workers, seed=cfg.seed , max_iters = cfg.max_iters), 
-                total = cfg.max_iters, 
-                desc = "Basic Transformer Training...")
-            tot_loss = 0.0
-            tot_nll = 0.0
-            tot_log_prior = 0.0
-            tot_log_variational_posterior = 0.0
-            tot_acc = 0.0
-            tot_acc_start = 0.0
-            tot_acc_end = 0.0
-            tot_acc_bigram = 0.0
-            for (x , y , outs) in pbar:
-                # print(f"x shape {x.shape} , y shape {y.shape} , outs shape{outs.shape}"
+                    x = torch.from_numpy(x).cuda()
+                    y = torch.from_numpy(y).cuda()
+                    outs = torch.from_numpy(outs).cuda()
 
-                x = torch.from_numpy(x).cuda()
-                y = torch.from_numpy(y).cuda()
-                outs = torch.from_numpy(outs).cuda()
+                    optimizer.zero_grad()
 
-                optimizer.zero_grad()
+                    pred = model(x)
 
-                pred = model(x)
+                    if cfg.loss_head_only:
+                        pred_for_loss = pred[outs >= 2].permute(0 , 2 , 1)
+                        loss = F.nll_loss(pred_for_loss, y[outs >= 2] , reduction = "sum")
+                    else:
+                        pred_for_loss = pred.permute(0 , 2 , 1)
+                        loss = F.nll_loss(pred_for_loss, y , reduction = "sum")
 
-                if cfg.loss_head_only:
-                    pred_for_loss = pred[outs >= 2].permute(0 , 2 , 1)
-                    loss = F.nll_loss(pred_for_loss, y[outs >= 2] , reduction = "sum")
-                else:
-                    pred_for_loss = pred.permute(0 , 2 , 1)
-                    loss = F.nll_loss(pred_for_loss, y , reduction = "sum")
+                    loss.backward()
 
-                loss.backward()
-
-                optimizer.step()
-                acc = (pred.argmax(-1)[outs >= 1] == y[outs >= 1]).float().mean().item()
-                sl = 10
-                acc_start = (pred[:,:sl].argmax(-1)[outs[:,:sl] >= 1] == y[:,:sl][outs[:,:sl] >= 1]).float().mean().item()
-                el = 500
-                acc_end = (pred[:,-el:].argmax(-1)[outs[:,-el:] >= 2] == y[:,-el:][outs[:,-el:] >= 2]).float().mean().item()
-                acc_bigram = (pred.argmax(-1)[outs == 0] == y[outs == 0]).float().mean().item()
-
-
-                nb = cfg.max_iters
-                tot_nll += loss.item() / nb
-                tot_acc += acc / nb * 100
-                tot_acc_start += acc_start / nb * 100
-                tot_acc_end += acc_end / nb * 100
-                tot_acc_bigram += acc_bigram / nb * 100
-
-            run.log({'nll' : loss , 'acc(%)' : tot_acc,
-                    'acc_start(%)' : tot_acc_start , 'acc_end(%)' : tot_acc_end , 'acc_bigram(%)' : tot_acc_bigram})
+                    optimizer.step()
+                    acc = (pred.argmax(-1)[outs >= 1] == y[outs >= 1]).float().mean().item()
+                    sl = 10
+                    acc_start = (pred[:,:sl].argmax(-1)[outs[:,:sl] >= 1] == y[:,:sl][outs[:,:sl] >= 1]).float().mean().item()
+                    el = 500
+                    acc_end = (pred[:,-el:].argmax(-1)[outs[:,-el:] >= 2] == y[:,-el:][outs[:,-el:] >= 2]).float().mean().item()
+                    acc_bigram = (pred.argmax(-1)[outs == 0] == y[outs == 0]).float().mean().item()
 
 
-    bayesian_model = to_bayesian(model , delta=0.1)
-    # if cfg.optim_args.use_sgd:
-    #     boptim = torch.optim.SGD(bayesian_model.parameters(),
-    #             lr=cfg.optim_args.learning_rate,
-    #             weight_decay=cfg.optim_args.weight_decay,
-    #             momentum=cfg.optim_args.momentum)
-    # else:
-    #     boptim = torch.optim.AdamW(
-    #             bayesian_model.parameters(),
-    #             lr=cfg.optim_args.learning_rate,
-    #             weight_decay=cfg.optim_args.weight_decay,
-    #             betas=(0.9, 0.95),
-    #             eps=1e-8)
+                    nb = cfg.max_iters
+                    tot_nll += loss.item() / nb
+                    tot_acc += acc / nb * 100
+                    tot_acc_start += acc_start / nb * 100
+                    tot_acc_end += acc_end / nb * 100
+                    tot_acc_bigram += acc_bigram / nb * 100
+
+                run.log({'nll' : loss , 'acc(%)' : tot_acc,
+                        'acc_start(%)' : tot_acc_start , 'acc_end(%)' : tot_acc_end , 'acc_bigram(%)' : tot_acc_bigram})
+        bayesian_model = to_bayesian(model , delta=0.1)
+        bayesian_model.cuda()
+
+
     boptim = torch.optim.Adam(bayesian_model.parameters() , lr = cfg.optim_args.learning_rate)
-    bayesian_model.cuda()
-
 
     for epoch in tqdm(range(EPOCHS), desc="Epoch"):
 
@@ -267,7 +240,9 @@ if __name__ == '__main__':
             tot_acc_end += acc_end / nb * 100
             tot_acc_bigram += acc_bigram / nb * 100
 
-
+        if epoch % 100 == 0:
+            torch.save(bayesian_model.state_dict(), Path(cfg.save_dir) / f"basic_bayesian_transformer_epoch_{epoch}.pth")
+            print(f"Successfully SAVED at {Path(cfg.save_dir) / f'basic_bayesian_transformer_epoch_{epoch}.pth'}")
         pbar.set_postfix(
             loss = tot_loss,
             nll = tot_nll,
@@ -282,4 +257,8 @@ if __name__ == '__main__':
         run.log({'loss' : tot_loss , 'nll' : tot_nll , 'log_prior' : tot_log_prior , 'log_variational_posterior' : tot_log_variational_posterior , 'acc(%)' : tot_acc,
                  'acc_start(%)' : tot_acc_start , 'acc_end(%)' : tot_acc_end , 'acc_bigram(%)' : tot_acc_bigram})
         # logger.log(msg = f"epoch : {epoch} , loss : {tot_loss} , nll : {tot_nll} , log_prior : {tot_log_prior} , log_variational_posterior : {tot_log_variational_posterior} , acc = {tot_acc:.2f}%\n")
-        
+    
+    if cfg.save_model:
+        torch.save(bayesian_model.state_dict(), Path(cfg.save_dir) / "basic_bayesian_transformer.pth")
+
+        print("Successfully SAVED at {}".format(Path(cfg.save_dir) / "basic_bayesian_transformer.pth"))
