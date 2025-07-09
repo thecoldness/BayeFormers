@@ -177,7 +177,7 @@ def ww_style_esd(eigs: np.ndarray,
 
 if __name__ == '__main__':
 
-    torch.cuda.set_device(1)
+    torch.cuda.set_device(0)
 
     args = TrainerArgs(
            optim_args=OptimArgs(),
