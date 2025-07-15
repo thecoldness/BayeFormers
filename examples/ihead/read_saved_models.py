@@ -45,7 +45,7 @@ class TrainerArgs:
     num_data_workers: int = 60
     seed: int = 42
     load_model: bool = False
-    load_dir: Optional[str] = "./examples/ihead/saved_models/basic_bayesian_transformer.pth"
+    load_dir: Optional[str] = "./examples/ihead/saved_models/"
     save_model: bool = False
     save_dir: Optional[str] = "./examples/ihead/saved_models"
     root_dir: str = ''
@@ -229,24 +229,38 @@ if __name__ == '__main__':
 
     # ----- Read trained model -----
     bayesian_model = to_bayesian(model , delta=0.1)
-    bayesian_model.load_state_dict(torch.load(cfg.load_dir))
-    print(f"Successfully loaded model from {cfg.load_dir}")
-    bayesian_model.cuda()
 
-    print(bayesian_model.bayesian_children)
-    print(bayesian_model.named_modules)
+    for epoch in range(0 , 1000 , 100):
+        load_dir = cfg.load_dir + f"/basic_bayesian_transformer_epoch_{epoch}.pth"
+        bayesian_model.load_state_dict(torch.load(load_dir))
+        print(f"Successfully loaded model from {load_dir}")
+        bayesian_model.cuda()
 
-    for name, module in bayesian_model.named_modules():
-        if isinstance(module , Gaussian) and name.endswith("weight"):
-            print("name : {name} , module : {module}".format(name=name, module=module))
-            mu , sigma = module.mu.detach() , F.softplus(module.rho).detach()
-            # mu , sigma = mu.cpu().numpy(), sigma.cpu().numpy()
-            # print(f"mu.shape: {mu.shape}, sigma.shape: {sigma.shape}")
-            eigs = gram_eigs(mu)
-            out = f"./examples/ihead/analyze/{name}_esd.pdf"
-            ww_style_esd(eigs,
-                distribution="power_law",
-                title_tag=f"Layer:{name} ",
-                xlim=(0.8, 100),
-                savefile=out,
-                show=True)
+        print(bayesian_model.bayesian_children)
+        print(bayesian_model.named_modules)
+
+
+        # original_weights = {}
+        # for name, layer in bayesian_model.named_modules():
+        #     if hasattr(layer, 'weight') and hasattr(layer.weight, 'mu'):
+        #         print(f"  - 正在处理层: {name}")
+        #         original_weights[name] = layer.weight
+        #         layer.weight = layer.weight.mu
+
+        # watcher = ww.WeightWatcher(model=bayesian_model)
+        # details = watcher.analyze()
+
+        for name, module in bayesian_model.named_modules():
+            if isinstance(module , Gaussian) and name.endswith("weight"):
+                print("name : {name} , module : {module}".format(name=name, module=module))
+                mu , sigma = module.mu.detach() , F.softplus(module.rho).detach()
+                # mu , sigma = mu.cpu().numpy(), sigma.cpu().numpy()
+                # print(f"mu.shape: {mu.shape}, sigma.shape: {sigma.shape}")
+                eigs = gram_eigs(mu)
+                out = f"./examples/ihead/analyze/unfreezed output/{name}_E{epoch}_esd.pdf"
+                ww_style_esd(eigs,
+                    distribution="power_law",
+                    title_tag=f"Layer:{name} ",
+                    xlim=(0.8, 100),
+                    savefile=out,
+                    show=True)
