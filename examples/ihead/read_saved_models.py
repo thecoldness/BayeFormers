@@ -257,7 +257,7 @@ if __name__ == '__main__':
                 # mu , sigma = mu.cpu().numpy(), sigma.cpu().numpy()
                 # print(f"mu.shape: {mu.shape}, sigma.shape: {sigma.shape}")
                 eigs = gram_eigs(mu)
-                out = f"./examples/ihead/analyze/unfreezed output/{name}_E{epoch}_esd.pdf"
+                out = f"./examples/ihead/analyze/{name}_E{epoch}_esd.pdf"
                 ww_style_esd(eigs,
                     distribution="power_law",
                     title_tag=f"Layer:{name} ",

@@ -53,7 +53,7 @@ class TrainerArgs:
 
 if __name__ == '__main__':
 
-    torch.cuda.set_device(0)
+    torch.cuda.set_device(2)
 
     args = TrainerArgs(
            optim_args=OptimArgs(),
@@ -65,7 +65,8 @@ if __name__ == '__main__':
     run = wandb.init(
         entity = "3233822097-peking-university",
         project = "BayeFormers",
-        name = "basic Bayesian transformer with pretrain(var = 0.1 , alpha=0.5)",
+        name = "unfreezed output with pretrain(var = 0.1 , alpha=0.5)",
+        # name = "test",
         config = OmegaConf.to_container(cfg)
     )
 
@@ -150,7 +151,8 @@ if __name__ == '__main__':
                     loss.backward()
 
                     optimizer.step()
-                    acc = (pred.argmax(-1)[outs >= 1] == y[outs >= 1]).float().mean().item()
+                    # acc = (pred.argmax(-1)[-1] == y[outs >= 1]).float().mean().item()
+                    acc = (pred.argmax(-1)[-1] == y[-1]).float().mean().item()
                     sl = 10
                     acc_start = (pred[:,:sl].argmax(-1)[outs[:,:sl] >= 1] == y[:,:sl][outs[:,:sl] >= 1]).float().mean().item()
                     el = 500
@@ -209,7 +211,8 @@ if __name__ == '__main__':
             log_prior = log_prior.mean()
             log_variational_posterior = log_variational_posterior.mean()
 
-            acc = (predictions.argmax(-1)[outs >= 1] == y[outs >= 1]).float().mean().item()
+            # acc = (predictions.argmax(-1)[outs >= 1] == y[outs >= 1]).float().mean().item()
+            acc = (pred.argmax(-1)[-1] == y[-1]).float().mean().item()
             sl = 10
             acc_start = (predictions[:,:sl].argmax(-1)[outs[:,:sl] >= 1] == y[:,:sl][outs[:,:sl] >= 1]).float().mean().item()
             el = 500

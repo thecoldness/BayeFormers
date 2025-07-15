@@ -7,6 +7,7 @@ import numpy as np
 import pickle
 import time
 import sys
+import random
 
 from typing import List, Optional, Tuple
 
@@ -15,13 +16,13 @@ logging.getLogger().setLevel(logging.INFO)
 
 @dataclass
 class DataArgs:
-    k: int = 5
+    k: int = 1
     seq_length: int = 256
     show_latents: bool = False
     fixed_special_toks: bool = True
     special_toks_offset: int = 0
     output_counter: bool = True
-    no_repeat: bool = False
+    no_repeat: bool = True
 
 class Dataset:
     def __init__(self, args: DataArgs,
@@ -118,17 +119,8 @@ class Dataset:
             outputs_seq = []
         seq += [rng.choice(self.tok_range, p=self.marginal)]
         while len(seq) < self.seq_length + 1:
-            last = seq[-1]
-            if last in idxs:
-                # first is random
-                if self.noise_prob > 0:
-                    random_float = random.uniform(0, 1)
-                    if random_float >= self.noise_prob:
-                        seq.append(outs[idxs.index(last)])
-                    else:
-                        seq.append(self.noise_token_id) # This makes a fixed noise with probability
-                else:
-                    seq.append(outs[idxs.index(last)]) 
+            if len(seq) == self.seq_length:
+                seq.append(idxs[0])
 
                 if self.output_counter:
                     cnts[last] = cnts.get(last, 0) + 1
@@ -136,9 +128,29 @@ class Dataset:
                 else:
                     outputs_seq.append(1)
             else:
-                probs = self.cond[last]
-                outputs_seq.append(0)
-                seq.append(rng.choice(self.tok_range, p=probs))
+                last = seq[-1]
+                if last in idxs:
+                    # first is random
+                    if self.noise_prob > 0:
+                        random_float = random.uniform(0, 1)
+                        if random_float >= self.noise_prob:
+                            seq.append(outs[idxs.index(last)])
+                        else:
+                            # seq.append(self.noise_token_id) # This makes a fixed noise with probability
+                            # change: target token is chosen randomly from the pool
+                            seq.append(random.randrange(0 , self.num_tokens))
+                    else:
+                        seq.append(outs[idxs.index(last)]) 
+
+                    if self.output_counter:
+                        cnts[last] = cnts.get(last, 0) + 1
+                        outputs_seq.append(cnts[last])
+                    else:
+                        outputs_seq.append(1)
+                else:
+                    probs = self.cond[last]
+                    outputs_seq.append(0)
+                    seq.append(rng.choice(self.tok_range, p=probs))
         outputs_seq.append(0)
 
         return seq, outputs_seq
