@@ -136,9 +136,9 @@ class Dataset:
                         if random_float >= self.noise_prob:
                             seq.append(outs[idxs.index(last)])
                         else:
-                            # seq.append(self.noise_token_id) # This makes a fixed noise with probability
+                            seq.append(self.noise_token_id) # This makes a fixed noise with probability
                             # change: target token is chosen randomly from the pool
-                            seq.append(random.randrange(0 , self.num_tokens))
+                            # seq.append(random.randrange(0 , self.num_tokens))
                     else:
                         seq.append(outs[idxs.index(last)]) 
 

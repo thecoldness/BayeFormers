@@ -65,6 +65,7 @@ if __name__ == '__main__':
     run = wandb.init(
         entity = "3233822097-peking-university",
         project = "BayeFormers",
+        group="unchanged dataset",
         name = "unfreezed output with pretrain(var = 0.1 , alpha=0.5)",
         # name = "test",
         config = OmegaConf.to_container(cfg)
