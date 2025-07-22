@@ -53,7 +53,7 @@ class TrainerArgs:
 
 if __name__ == '__main__':
 
-    torch.cuda.set_device(1)
+    torch.cuda.set_device(2)
 
     args = TrainerArgs(
            optim_args=OptimArgs(),
@@ -153,6 +153,9 @@ if __name__ == '__main__':
 
                     optimizer.step()
                     # acc = (pred.argmax(-1)[outs >= 1] == y[outs >= 1]).float().mean().item()
+                    # print(f"pred.shape : {pred.shape} , outs shape : {outs.shape} , y shape : {y.shape}")
+                    # print(pred.argmax(-1)[: , -1] , y[: , -1])
+                    # input()
                     acc = (pred.argmax(-1)[: , -1] == y[: , -1]).float().mean().item()
                     sl = 10
                     acc_start = (pred[:,:sl].argmax(-1)[outs[:,:sl] >= 1] == y[:,:sl][outs[:,:sl] >= 1]).float().mean().item()
@@ -243,10 +246,7 @@ if __name__ == '__main__':
             tot_acc_start += acc_start / nb * 100
             tot_acc_end += acc_end / nb * 100
             tot_acc_bigram += acc_bigram / nb * 100
-
-        if epoch % 100 == 0:
-            torch.save(bayesian_model.state_dict(), Path(cfg.save_dir) / f"basic_bayesian_transformer_epoch_{epoch}.pth")
-            print(f"Successfully SAVED at {Path(cfg.save_dir) / f'basic_bayesian_transformer_epoch_{epoch}.pth'}")
+        
         pbar.set_postfix(
             loss = tot_loss,
             nll = tot_nll,

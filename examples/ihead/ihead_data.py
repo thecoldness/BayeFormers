@@ -74,6 +74,7 @@ class Dataset:
         if args.fixed_special_toks:
             # use unigram marginals
             self.idxs = list(self.marginal.argsort()[self.num_tokens-args.special_toks_offset-self.k:self.num_tokens-args.special_toks_offset])
+            print(f"Using fixed special tokens: {self.idxs} (offset {args.special_toks_offset})")
 
     def decode(self, idxs: List[int]) -> str:
         return ''.join(self.itos[idx] for idx in idxs)
@@ -119,7 +120,7 @@ class Dataset:
             outputs_seq = []
         seq += [rng.choice(self.tok_range, p=self.marginal)]
         while len(seq) < self.seq_length + 1:
-            if len(seq) == self.seq_length:
+            if len(seq) == self.seq_length - 1:
                 seq.append(idxs[0])
 
                 if self.output_counter:
@@ -134,11 +135,18 @@ class Dataset:
                     if self.noise_prob > 0:
                         random_float = random.uniform(0, 1)
                         if random_float >= self.noise_prob:
+                            # print(f"Using last token {last} from idxs")
+                            # print(f"add {outs[idxs.index(last)]} to seq")
+                            # input()
                             seq.append(outs[idxs.index(last)])
                         else:
                             # seq.append(self.noise_token_id) # This makes a fixed noise with probability
                             # change: target token is chosen randomly from the pool
-                            seq.append(random.randrange(0 , self.num_tokens))
+                            t = rng.integers(self.num_tokens)
+                            # print(f"Using last token {last} from idxs")
+                            # print(f"add random {t} to seq")
+                            # input()                                 
+                            seq.append(t)
                     else:
                         seq.append(outs[idxs.index(last)]) 
 
