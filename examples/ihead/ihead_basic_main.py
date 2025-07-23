@@ -33,7 +33,7 @@ class TrainerArgs:
     data_args: DataArgs
     model_args: ModelArgs
     max_iters: Optional[int] = 10
-    epoch:int=1000
+    epoch:int=501
     pretrain:bool = True
     eval_delta: int = 5
     log_norms: bool = False
@@ -51,9 +51,11 @@ class TrainerArgs:
     root_dir: str = ''
 
 
+# save_model = True model_args.k=5 
+
 if __name__ == '__main__':
 
-    torch.cuda.set_device(2)
+    torch.cuda.set_device(1)
 
     args = TrainerArgs(
            optim_args=OptimArgs(),
@@ -65,9 +67,10 @@ if __name__ == '__main__':
     run = wandb.init(
         entity = "3233822097-peking-university",
         project = "BayeFormers",
-        group="test",
-        name = "acc is last one , changed dataset",
-        # name = "test",
+        # group="test",
+        # name="test",
+        group="changed dataset",
+        name = "last acc , k=5",
         config = OmegaConf.to_container(cfg)
     )
 
@@ -246,7 +249,10 @@ if __name__ == '__main__':
             tot_acc_start += acc_start / nb * 100
             tot_acc_end += acc_end / nb * 100
             tot_acc_bigram += acc_bigram / nb * 100
-        
+
+        if cfg.save_model and epoch % 100 == 0:
+            torch.save(bayesian_model.state_dict(), Path(cfg.save_dir) / f"basic_bayesian_transformer_epoch_{epoch}.pth")
+            print("Successfully SAVED at {}".format(Path(cfg.save_dir) / f"basic_bayesian_transformer_epoch_{epoch}.pth"))
         pbar.set_postfix(
             loss = tot_loss,
             nll = tot_nll,
@@ -264,5 +270,4 @@ if __name__ == '__main__':
     
     if cfg.save_model:
         torch.save(bayesian_model.state_dict(), Path(cfg.save_dir) / "basic_bayesian_transformer.pth")
-
         print("Successfully SAVED at {}".format(Path(cfg.save_dir) / "basic_bayesian_transformer.pth"))

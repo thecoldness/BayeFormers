@@ -140,12 +140,8 @@ class Dataset:
                             # input()
                             seq.append(outs[idxs.index(last)])
                         else:
-                            # seq.append(self.noise_token_id) # This makes a fixed noise with probability
-                            # change: target token is chosen randomly from the pool
                             t = rng.integers(self.num_tokens)
-                            # print(f"Using last token {last} from idxs")
-                            # print(f"add random {t} to seq")
-                            # input()                                 
+                            # t = self.noise_token_id
                             seq.append(t)
                     else:
                         seq.append(outs[idxs.index(last)]) 

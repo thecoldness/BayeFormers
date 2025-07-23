@@ -117,6 +117,8 @@ def ww_style_esd(eigs: np.ndarray,
 
     xmin, xmax = fit.xmin, fit.xmax
 
+    print(f"xmin: {xmin}, xmax: {xmax}")
+
     # ---------- plot ---------------------------------------------------------
     plt.figure(figsize=(10, 5))
 
@@ -177,8 +179,7 @@ def ww_style_esd(eigs: np.ndarray,
 
 if __name__ == '__main__':
 
-    torch.cuda.set_device(0)
-
+    torch.cuda.set_device(2)
     args = TrainerArgs(
            optim_args=OptimArgs(),
            data_args=DataArgs(),
@@ -222,16 +223,17 @@ if __name__ == '__main__':
     x_exp = x_exp[:,:ds.seq_length]
 
     # OOD test data
-    x_test, out_test = ds_test.gen_batch(np.random.default_rng(0), 512)
-    x_t = torch.from_numpy(x_test[:,:ds.seq_length]).cuda()
-    y_t = torch.from_numpy(x_test[:,1:ds.seq_length + 1]).cuda()
-    outs_t = torch.from_numpy(out_test[:,:ds.seq_length]).cuda()
+    # x_test, out_test = ds_test.gen_batch(np.random.default_rng(0), 512)
+    # x_t = torch.from_numpy(x_test[:,:ds.seq_length]).cuda()
+    # y_t = torch.from_numpy(x_test[:,1:ds.seq_length + 1]).cuda()
+    # outs_t = torch.from_numpy(out_test[:,:ds.seq_length]).cuda()
 
     # ----- Read trained model -----
     bayesian_model = to_bayesian(model , delta=0.1)
 
-    for epoch in range(0 , 1000 , 100):
+    for epoch in range(0 , EPOCHS , 100):
         load_dir = cfg.load_dir + f"/basic_bayesian_transformer_epoch_{epoch}.pth"
+        # load_dir = cfg.load_dir + f"/basic_bayesian_transformer.pth"
         bayesian_model.load_state_dict(torch.load(load_dir))
         print(f"Successfully loaded model from {load_dir}")
         bayesian_model.cuda()
@@ -239,25 +241,14 @@ if __name__ == '__main__':
         print(bayesian_model.bayesian_children)
         print(bayesian_model.named_modules)
 
-
-        # original_weights = {}
-        # for name, layer in bayesian_model.named_modules():
-        #     if hasattr(layer, 'weight') and hasattr(layer.weight, 'mu'):
-        #         print(f"  - 正在处理层: {name}")
-        #         original_weights[name] = layer.weight
-        #         layer.weight = layer.weight.mu
-
-        # watcher = ww.WeightWatcher(model=bayesian_model)
-        # details = watcher.analyze()
-
         for name, module in bayesian_model.named_modules():
             if isinstance(module , Gaussian) and name.endswith("weight"):
                 print("name : {name} , module : {module}".format(name=name, module=module))
                 mu , sigma = module.mu.detach() , F.softplus(module.rho).detach()
                 # mu , sigma = mu.cpu().numpy(), sigma.cpu().numpy()
-                # print(f"mu.shape: {mu.shape}, sigma.shape: {sigma.shape}")
+                print(f"name : {name} , mu.shape: {mu.shape}, sigma.shape: {sigma.shape}")
                 eigs = gram_eigs(mu)
-                out = f"./examples/ihead/analyze/{name}_E{epoch}_esd.pdf"
+                out = f"./examples/ihead/analyze/{name}_E{epoch}.pdf"
                 ww_style_esd(eigs,
                     distribution="power_law",
                     title_tag=f"Layer:{name} ",
