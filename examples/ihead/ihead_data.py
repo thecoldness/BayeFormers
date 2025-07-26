@@ -121,7 +121,7 @@ class Dataset:
         seq += [rng.choice(self.tok_range, p=self.marginal)]
         while len(seq) < self.seq_length + 1:
             if len(seq) == self.seq_length - 1:
-                seq.append(idxs[0])
+                seq.append(rng.choice(idxs))
 
                 if self.output_counter:
                     cnts[last] = cnts.get(last, 0) + 1

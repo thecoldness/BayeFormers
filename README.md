@@ -1,5 +1,12 @@
 This project is to generate ESD for BNN Transformers.
 
+# Run
+
+```
+cd BayeFormers
+python -m examples.ihead.ihead_basic_main save_model=True data_args.k=1 pretrain=False
+```
+
 ## References
 
 **Papers**

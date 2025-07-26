@@ -51,11 +51,11 @@ class TrainerArgs:
     root_dir: str = ''
 
 
-# save_model = True model_args.k=5 
+# save_model = True data_args.k=5 pretrain=False
 
 if __name__ == '__main__':
 
-    torch.cuda.set_device(1)
+    torch.cuda.set_device(2)
 
     args = TrainerArgs(
            optim_args=OptimArgs(),
@@ -70,7 +70,7 @@ if __name__ == '__main__':
         # group="test",
         # name="test",
         group="changed dataset",
-        name = "last acc , k=5",
+        name = f"last acc , k={cfg.data_args.k}, pretrain={cfg.pretrain}",
         config = OmegaConf.to_container(cfg)
     )
 
@@ -192,7 +192,7 @@ if __name__ == '__main__':
         tot_acc_start = 0.0
         tot_acc_end = 0.0
         tot_acc_bigram = 0.0
-        pbar = tqdm(ParallelDataLoader(ds_test, batch_size=cfg.optim_args.batch_size,num_workers=cfg.num_data_workers, seed=cfg.seed , max_iters = cfg.max_iters),
+        pbar = tqdm(ParallelDataLoader(ds, batch_size=cfg.optim_args.batch_size,num_workers=cfg.num_data_workers, seed=cfg.seed , max_iters = cfg.max_iters),
                     total = cfg.max_iters,
                     desc = "Test Epoch")
         for (x , y , outs) in pbar:

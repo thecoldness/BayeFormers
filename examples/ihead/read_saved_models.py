@@ -33,7 +33,7 @@ class TrainerArgs:
     data_args: DataArgs
     model_args: ModelArgs
     max_iters: Optional[int] = 10
-    epoch:int=1000
+    epoch:int=501
     pretrain:bool = True
     eval_delta: int = 5
     log_norms: bool = False
@@ -230,6 +230,8 @@ if __name__ == '__main__':
 
     # ----- Read trained model -----
     bayesian_model = to_bayesian(model , delta=0.1)
+    matrix_mu = {}
+    matrix_sigma = {}
 
     for epoch in range(0 , EPOCHS , 100):
         load_dir = cfg.load_dir + f"/basic_bayesian_transformer_epoch_{epoch}.pth"
@@ -244,9 +246,13 @@ if __name__ == '__main__':
         for name, module in bayesian_model.named_modules():
             if isinstance(module , Gaussian) and name.endswith("weight"):
                 print("name : {name} , module : {module}".format(name=name, module=module))
-                mu , sigma = module.mu.detach() , F.softplus(module.rho).detach()
-                # mu , sigma = mu.cpu().numpy(), sigma.cpu().numpy()
-                print(f"name : {name} , mu.shape: {mu.shape}, sigma.shape: {sigma.shape}")
+                if epoch == 0:
+                    matrix_mu[name] = []
+                    matrix_sigma[name] = []
+                mu , sigma = module.mu.detach().clone() , F.softplus(module.rho).detach().clone()
+                matrix_mu[name].append(mu)
+                matrix_sigma[name].append(sigma)
+
                 eigs = gram_eigs(mu)
                 out = f"./examples/ihead/analyze/{name}_E{epoch}.pdf"
                 ww_style_esd(eigs,
@@ -255,3 +261,11 @@ if __name__ == '__main__':
                     xlim=(0.8, 100),
                     savefile=out,
                     show=True)
+    
+    for name, module in bayesian_model.named_modules():
+        if isinstance(module , Gaussian) and name.endswith("weight"):
+            for i in range(1 , len(matrix_mu[name])):
+                print(f"distance between mu of epoch {i - 1} and {i} is {np.linalg.norm(matrix_mu[name][i - 1].cpu() - matrix_mu[name][i].cpu() , 'fro')}") 
+            for i in range(1 , len(matrix_sigma[name])):
+                print(f"distance between sigma of epoch {i - 1} and {i} is {np.linalg.norm(matrix_sigma[name][i - 1].cpu() - matrix_sigma[name][i].cpu() , 'fro')}")            
+            
