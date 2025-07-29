@@ -23,6 +23,7 @@ class DataArgs:
     special_toks_offset: int = 0
     output_counter: bool = True
     no_repeat: bool = True
+    change:bool = True
 
 class Dataset:
     def __init__(self, args: DataArgs,
@@ -37,6 +38,8 @@ class Dataset:
         self.train_test = train_test
         self.output_counter = args.output_counter
         self.no_repeat = args.no_repeat
+        self.change=args.change
+    
         self.bigram_outs = bigram_outs
 
         self.noise_prob = noise_prob
@@ -140,8 +143,10 @@ class Dataset:
                             # input()
                             seq.append(outs[idxs.index(last)])
                         else:
-                            t = rng.integers(self.num_tokens)
-                            # t = self.noise_token_id
+                            if self.change:
+                                t = rng.integers(self.num_tokens)
+                            else:
+                                t = self.noise_token_id
                             seq.append(t)
                     else:
                         seq.append(outs[idxs.index(last)]) 

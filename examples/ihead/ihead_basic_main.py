@@ -69,7 +69,7 @@ if __name__ == '__main__':
         project = "BayeFormers",
         # group="test",
         # name="test",
-        group="changed dataset",
+        group= "changed dataset" if cfg.data_args.change else "unchanged dataset",
         name = f"last acc , k={cfg.data_args.k}, pretrain={cfg.pretrain}",
         config = OmegaConf.to_container(cfg)
     )
