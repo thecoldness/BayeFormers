@@ -67,10 +67,10 @@ if __name__ == '__main__':
     run = wandb.init(
         entity = "3233822097-peking-university",
         project = "BayeFormers",
-        # group="test",
+        group="test",
         # name="test",
-        group= "changed dataset" if cfg.data_args.change else "unchanged dataset",
-        name = f"last acc , k={cfg.data_args.k}, pretrain={cfg.pretrain}",
+        # group= "changed dataset" if cfg.data_args.change else "unchanged dataset",
+        name = f"last acc , k={cfg.data_args.k}, pretrain={cfg.pretrain} with only two noise token",
         config = OmegaConf.to_container(cfg)
     )
 

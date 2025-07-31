@@ -1,10 +1,24 @@
 This project is to generate ESD for BNN Transformers.
 
+# Initialize
+
+```
+cd BayeFormers
+conda env create -f env.yml
+conda activate BayeFormers
+```
+
 # Run
 
 ```
 cd BayeFormers
 python -m examples.ihead.ihead_basic_main save_model=True data_args.k=1 pretrain=False
+```
+
+# Load Model and Visualize
+```
+cd BayeFormers
+python -m examples.ihead.load_models load_dir="./examples/ihead/saved_models/changed dataset k=1 unpretrain"
 ```
 
 ## References

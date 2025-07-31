@@ -144,7 +144,7 @@ class Dataset:
                             seq.append(outs[idxs.index(last)])
                         else:
                             if self.change:
-                                t = rng.integers(self.num_tokens)
+                                t = rng.integers(2)
                             else:
                                 t = self.noise_token_id
                             seq.append(t)

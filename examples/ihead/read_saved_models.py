@@ -46,9 +46,6 @@ class TrainerArgs:
     seed: int = 42
     load_model: bool = False
     load_dir: Optional[str] = "./examples/ihead/saved_models/"
-    save_model: bool = False
-    save_dir: Optional[str] = "./examples/ihead/saved_models"
-    root_dir: str = ''
 
 # ---------------------------------------------------------------
 # exact WW-layer style plot for one eigen-spectrum

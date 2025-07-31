@@ -327,24 +327,6 @@ class Transformer(nn.Module):
         
         return self.log_softmax(output.float())
 
-    # def forward_ff_only(self, tokens: torch.Tensor):
-    #     B, N = tokens.shape
-
-    #     # embedding layer
-    #     h = self.tok_embeddings(tokens)
-    #     if not self.use_rope:
-    #         h = h + self.pe.unsqueeze(0)
-
-    #     # transformer blocks
-    #     for i, layer in enumerate(self.layers):
-    #         h = h + layer.ff(h)
-
-    #     # output layer
-    #     output = self.output(h)
-    #     if self.tie_output:
-    #         output /= math.sqrt(self.dim)
-    #     return output.float()
-
     def get_layer_scores(self, tokens: torch.Tensor, n: int = 0):
         assert n < len(self.layers)
         B, N = tokens.shape
