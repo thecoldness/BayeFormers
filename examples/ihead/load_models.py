@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import numpy as np
 from logging import Logger
 import weightwatcher as ww
+from tqdm import tqdm
 
 from omegaconf import OmegaConf
 from typing import List, Optional, Tuple
@@ -124,9 +125,47 @@ if __name__ == '__main__':
     print(f"Successfully loaded model from {load_dir}")
     bayesian_model.cuda()
 
+    for epoch in tqdm(range(10), desc="Epoch"):
+        
+        tot_noise_pred = 0.0
+        tot_acc = 0.0
+        tot_acc_start = 0.0
+        tot_acc_end = 0.0
+        tot_acc_bigram = 0.0
+        tensor2 = torch.full((512,) , 2 , dtype=torch.int).cuda()
+        pbar = tqdm(ParallelDataLoader(ds, batch_size=cfg.optim_args.batch_size,num_workers=cfg.num_data_workers, seed=cfg.seed , max_iters = cfg.max_iters),
+                    total = cfg.max_iters)
+        
 
-    for name, module in bayesian_model.named_modules():
-        if isinstance(module , Gaussian) and name.endswith("weight"):
-            print("name : {name} , module : {module}".format(name=name, module=module))
-            mu , sigma = module.mu.detach().clone() , F.softplus(module.rho).detach().clone()
-            print(mu , sigma)
+        for (x , y , outs) in pbar:
+
+            x = torch.from_numpy(x).cuda()
+            y = torch.from_numpy(y).cuda()
+            outs = torch.from_numpy(outs).cuda()
+
+            SAMPLES = 10
+            predictions = torch.zeros(SAMPLES , cfg.optim_args.batch_size , *output_dim).cuda()
+
+            for s in range(SAMPLES):
+                pred = bayesian_model(x)
+                predictions[s] = pred
+            
+            predictions = predictions.mean(0)
+
+            # acc = (predictions.argmax(-1)[outs >= 1] == y[outs >= 1]).float().mean().item()
+            acc = (pred.argmax(-1)[: , -1] == y[: , -1]).float().mean().item()
+            noise_prob = (pred.argmax(-1)[: , -1] == tensor2).float().mean().item()
+            sl = 10
+            acc_start = (predictions[:,:sl].argmax(-1)[outs[:,:sl] >= 1] == y[:,:sl][outs[:,:sl] >= 1]).float().mean().item()
+            el = 500
+            acc_end = (predictions[:,-el:].argmax(-1)[outs[:,-el:] >= 2] == y[:,-el:][outs[:,-el:] >= 2]).float().mean().item()
+            acc_bigram = (predictions.argmax(-1)[outs == 0] == y[outs == 0]).float().mean().item()
+
+            nb = cfg.max_iters
+            tot_acc += acc / nb * 100
+            tot_acc_start += acc_start / nb * 100
+            tot_acc_end += acc_end / nb * 100
+            tot_acc_bigram += acc_bigram / nb * 100
+            tot_noise_pred += noise_prob / nb * 100
+        
+        print(f"tot_acc: {tot_acc:.2f}% , noise_pred = {tot_noise_pred:.2f}%")

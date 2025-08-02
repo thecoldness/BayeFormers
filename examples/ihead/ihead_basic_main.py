@@ -194,7 +194,7 @@ if __name__ == '__main__':
         tot_acc_bigram = 0.0
         pbar = tqdm(ParallelDataLoader(ds, batch_size=cfg.optim_args.batch_size,num_workers=cfg.num_data_workers, seed=cfg.seed , max_iters = cfg.max_iters),
                     total = cfg.max_iters,
-                    desc = "Test Epoch")
+                    desc = "Training Epoch")
         for (x , y , outs) in pbar:
 
             x = torch.from_numpy(x).cuda()

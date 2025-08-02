@@ -230,9 +230,10 @@ if __name__ == '__main__':
     matrix_mu = {}
     matrix_sigma = {}
 
-    for epoch in range(0 , EPOCHS , 100):
-        load_dir = cfg.load_dir + f"/basic_bayesian_transformer_epoch_{epoch}.pth"
-        # load_dir = cfg.load_dir + f"/basic_bayesian_transformer.pth"
+    # for epoch in range(0 , EPOCHS , 100):
+        # load_dir = cfg.load_dir + f"/basic_bayesian_transformer_epoch_{epoch}.pth"
+    for epoch in range(0 , 1 , 100):
+        load_dir = cfg.load_dir + f"/basic_bayesian_transformer.pth"
         bayesian_model.load_state_dict(torch.load(load_dir))
         print(f"Successfully loaded model from {load_dir}")
         bayesian_model.cuda()

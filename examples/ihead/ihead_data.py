@@ -24,6 +24,7 @@ class DataArgs:
     output_counter: bool = True
     no_repeat: bool = True
     change:bool = True
+    noise_prob:float = 0.5
 
 class Dataset:
     def __init__(self, args: DataArgs,
@@ -42,7 +43,7 @@ class Dataset:
     
         self.bigram_outs = bigram_outs
 
-        self.noise_prob = noise_prob
+        self.noise_prob = args.noise_prob
         self.noise_token_id = noise_token_id
 
         # init distributions
@@ -144,7 +145,7 @@ class Dataset:
                             seq.append(outs[idxs.index(last)])
                         else:
                             if self.change:
-                                t = rng.integers(2)
+                                t = rng.integers(self.num_tokens)
                             else:
                                 t = self.noise_token_id
                             seq.append(t)
