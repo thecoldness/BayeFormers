@@ -18,7 +18,7 @@ python -m examples.ihead.ihead_basic_main save_model=True data_args.k=1 pretrain
 # Load Model and Visualize
 ```
 cd BayeFormers
-python -m examples.ihead.load_models load_dir="./examples/ihead/saved_models/changed dataset k=1 unpretrain"
+python -m examples.ihead.load_models load_dir="./examples/ihead/saved_models/1"
 ```
 
 ## References
