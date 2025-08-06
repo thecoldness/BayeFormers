@@ -237,14 +237,12 @@ class ParallelDataLoader:
             p.start()
             
         # 4. 从队列中收集所有工人生成的数据，并进行处理
-        print(f"Pre-loading {self.num_batches} batches...")
         for _ in range(self.num_batches):
             x, outs = q.get()
             # 在这里处理数据并存入 self.batches
             # 这确保了迭代时可以直接使用
             processed_batch = (x[:,:-1], x[:,1:], outs[:,:-1])
             self.batches.append(processed_batch)
-        print("Pre-loading complete.")
 
         # 5. 等待所有工人进程结束，清理资源
         for p in processes:

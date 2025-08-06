@@ -16,7 +16,7 @@ class ModelArgs:
     final_ffn: bool = False
     first_ffn: bool = False
     linear_final_ffn: bool = False
-    linear_first_ffn: bool = True
+    linear_first_ffn: bool = False
     freeze_embeddings: bool = True
     freeze_output: bool = False
     tie_output: bool = False

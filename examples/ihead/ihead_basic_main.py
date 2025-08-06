@@ -1,4 +1,5 @@
 from bayeformers import to_bayesian
+from bayeformers.nn.parameters.gaussian import Gaussian
 
 import bayeformers.nn as bnn
 import torch
@@ -53,6 +54,8 @@ class TrainerArgs:
 
 # save_model = True data_args.k=5 pretrain=False
 
+# sigma 初始为 0.01
+
 if __name__ == '__main__':
 
     torch.cuda.set_device(2)
@@ -64,15 +67,15 @@ if __name__ == '__main__':
         )
     cfg = OmegaConf.merge(OmegaConf.structured(args), OmegaConf.from_cli())
 
-    run = wandb.init(
-        entity = "3233822097-peking-university",
-        project = "BayeFormers",
-        group="test",
-        # name="test",
-        # group= "changed dataset" if cfg.data_args.change else "unchanged dataset",
-        name = f"last acc , k={cfg.data_args.k}, pretrain={cfg.pretrain} with only two noise token",
-        config = OmegaConf.to_container(cfg)
-    )
+    # run = wandb.init(
+    #     entity = "3233822097-peking-university",
+    #     project = "BayeFormers",
+    #     group="test",
+    #     # name="test",
+    #     # group= "changed dataset" if cfg.data_args.change else "unchanged dataset",
+    #     name = f"last acc , k={cfg.data_args.k}, pretrain={cfg.pretrain} with only two noise token",
+    #     config = OmegaConf.to_container(cfg)
+    # )
 
     logger = Logger(f"./logs/{__name__}")
 
@@ -174,12 +177,17 @@ if __name__ == '__main__':
                     tot_acc_end += acc_end / nb * 100
                     tot_acc_bigram += acc_bigram / nb * 100
 
-                run.log({'nll' : loss , 'acc(%)' : tot_acc,
-                        'acc_start(%)' : tot_acc_start , 'acc_end(%)' : tot_acc_end , 'acc_bigram(%)' : tot_acc_bigram})
-        bayesian_model = to_bayesian(model , delta=0.1)
+                # run.log({'nll' : loss , 'acc(%)' : tot_acc,
+                #         'acc_start(%)' : tot_acc_start , 'acc_end(%)' : tot_acc_end , 'acc_bigram(%)' : tot_acc_bigram})
+        bayesian_model = to_bayesian(model)
         bayesian_model.cuda()
 
-
+    for name, module in bayesian_model.named_modules():
+        if isinstance(module , Gaussian) and name.endswith("weight"):
+            print("name : {name} , module : {module}".format(name=name, module=module))
+            mu , sigma = module.mu.detach().clone() , F.softplus(module.rho).detach().clone()
+            print(f"max sigma : {sigma.max()} , min sigma : {sigma.min()} , mean sigma : {sigma.mean()}")
+    
     boptim = torch.optim.Adam(bayesian_model.parameters() , lr = cfg.optim_args.learning_rate)
 
     for epoch in tqdm(range(EPOCHS), desc="Epoch"):
@@ -264,9 +272,8 @@ if __name__ == '__main__':
             acc_bigram = f"{tot_acc_bigram:.2f}%"
         )
         
-        run.log({'loss' : tot_loss , 'nll' : tot_nll , 'log_prior' : tot_log_prior , 'log_variational_posterior' : tot_log_variational_posterior , 'acc(%)' : tot_acc,
-                 'acc_start(%)' : tot_acc_start , 'acc_end(%)' : tot_acc_end , 'acc_bigram(%)' : tot_acc_bigram})
-        # logger.log(msg = f"epoch : {epoch} , loss : {tot_loss} , nll : {tot_nll} , log_prior : {tot_log_prior} , log_variational_posterior : {tot_log_variational_posterior} , acc = {tot_acc:.2f}%\n")
+        # run.log({'loss' : tot_loss , 'nll' : tot_nll , 'log_prior' : tot_log_prior , 'log_variational_posterior' : tot_log_variational_posterior , 'acc(%)' : tot_acc,
+                #  'acc_start(%)' : tot_acc_start , 'acc_end(%)' : tot_acc_end , 'acc_bigram(%)' : tot_acc_bigram})
     
     if cfg.save_model:
         torch.save(bayesian_model.state_dict(), Path(cfg.save_dir) / "basic_bayesian_transformer.pth")
