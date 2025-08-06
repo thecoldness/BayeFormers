@@ -116,11 +116,11 @@ if __name__ == '__main__':
     x_exp, out_exp = ds.gen_batch(np.random.default_rng(0), 128)
     x_exp = x_exp[:,:ds.seq_length]
 
-    bayesian_model = to_bayesian(model , delta=0.1)
+    bayesian_model = to_bayesian(model)
     matrix_mu = {}
     matrix_sigma = {}
 
-    load_dir = cfg.root + "saved_models/" + cfg.load_dir + f"/basic_bayesian_transformer.pth"
+    load_dir = cfg.load_dir + f"/basic_bayesian_transformer.pth"
     bayesian_model.load_state_dict(torch.load(load_dir))
     print(f"Successfully loaded model from {load_dir}")
     bayesian_model.cuda()
