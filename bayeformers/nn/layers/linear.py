@@ -141,6 +141,7 @@ class Linear(Module):
             baye.weight.rho.data = torch.log(
                 torch.exp(delta * torch.abs(linear.weight.data)) - 1.0
             )
+            # baye.weight.rho.data = torch.full(linear.weight.data.shape , 0.0)
             baye.weight.rho.data[baye.weight.rho.data == float("-inf")] = 0.0
             baye.weight.mu.requires_grad = not freeze
 

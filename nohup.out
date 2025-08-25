@@ -1,0 +1,46 @@
+Traceback (most recent call last):
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/xuyh/BayeFormers/examples/ihead/ihead_basic_main.py", line 12, in <module>
+    import wandb
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/wandb/__init__.py", line 22, in <module>
+    from wandb.sdk.lib import wb_logging as _wb_logging
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/wandb/sdk/__init__.py", line 25, in <module>
+    from .artifacts.artifact import Artifact
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/wandb/sdk/artifacts/artifact.py", line 30, in <module>
+    from wandb import data_types, env
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/wandb/data_types.py", line 16, in <module>
+    from .sdk.data_types.audio import Audio
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/wandb/sdk/data_types/audio.py", line 11, in <module>
+    from .base_types.media import BatchableMedia
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/wandb/sdk/data_types/base_types/media.py", line 14, in <module>
+    from .wb_value import WBValue
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/wandb/sdk/data_types/base_types/wb_value.py", line 4, in <module>
+    from wandb.sdk import wandb_setup
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/wandb/sdk/wandb_setup.py", line 38, in <module>
+    from . import wandb_settings
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/wandb/sdk/wandb_settings.py", line 159, in <module>
+    class Settings(BaseModel, validate_assignment=True):
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/pydantic/_internal/_model_construction.py", line 237, in __new__
+    complete_model_class(
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/pydantic/_internal/_model_construction.py", line 597, in complete_model_class
+    schema = gen_schema.generate_schema(cls)
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/pydantic/_internal/_generate_schema.py", line 711, in generate_schema
+    schema = self._generate_schema_inner(obj)
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/pydantic/_internal/_generate_schema.py", line 1004, in _generate_schema_inner
+    return self._model_schema(obj)
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/pydantic/_internal/_generate_schema.py", line 837, in _model_schema
+    {k: self._generate_md_field_schema(k, v, decorators) for k, v in fields.items()},
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/pydantic/_internal/_generate_schema.py", line 837, in <dictcomp>
+    {k: self._generate_md_field_schema(k, v, decorators) for k, v in fields.items()},
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/pydantic/_internal/_generate_schema.py", line 1206, in _generate_md_field_schema
+    common_field = self._common_field_schema(name, field_info, decorators)
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/pydantic/_internal/_generate_schema.py", line 1394, in _common_field_schema
+    schema = wrap_default(field_info, schema)
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/pydantic/_internal/_generate_schema.py", line 2619, in wrap_default
+    return core_schema.with_default_schema(
+  File "/home/xuyh/miniconda3/envs/BayeFormers/lib/python3.10/site-packages/pydantic_core/core_schema.py", line 2412, in with_default_schema
+    def with_default_schema(
+KeyboardInterrupt

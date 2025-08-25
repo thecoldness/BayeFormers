@@ -52,7 +52,7 @@ class TrainerArgs:
     root_dir: str = ''
 
 
-# save_model = True data_args.k=5 pretrain=False
+# save_model = True data_args.k=5 pretrain=False data_args.change=False
 
 # sigma 初始为 0.01
 
@@ -67,15 +67,15 @@ if __name__ == '__main__':
         )
     cfg = OmegaConf.merge(OmegaConf.structured(args), OmegaConf.from_cli())
 
-    # run = wandb.init(
-    #     entity = "3233822097-peking-university",
-    #     project = "BayeFormers",
-    #     group="test",
-    #     # name="test",
-    #     # group= "changed dataset" if cfg.data_args.change else "unchanged dataset",
-    #     name = f"last acc , k={cfg.data_args.k}, pretrain={cfg.pretrain} with only two noise token",
-    #     config = OmegaConf.to_container(cfg)
-    # )
+    run = wandb.init(
+        entity = "3233822097-peking-university",
+        project = "BayeFormers",
+        # group="unchanged dataset",
+        # name="test",
+        group= "changed dataset" if cfg.data_args.change else "unchanged dataset",
+        name = f"MLP1 + MLP2 last acc , k={cfg.data_args.k}, pretrain={cfg.pretrain} small sigma",
+        config = OmegaConf.to_container(cfg)
+    )
 
     logger = Logger(f"./logs/{__name__}")
 
@@ -118,69 +118,68 @@ if __name__ == '__main__':
     y_t = torch.from_numpy(x_test[:,1:ds.seq_length + 1]).cuda()
     outs_t = torch.from_numpy(out_test[:,:ds.seq_length]).cuda()
 
-    if cfg.load_model:
+    if cfg.pretrain:
+        for epoch in tqdm(range(20), desc="Epoch"):
+            pbar = tqdm(ParallelDataLoader(ds, batch_size=cfg.optim_args.batch_size,num_workers=cfg.num_data_workers, seed=cfg.seed , max_iters = cfg.max_iters), 
+                total = cfg.max_iters, 
+                desc = "Basic Transformer Training...")
+            tot_loss = 0.0
+            tot_nll = 0.0
+            tot_log_prior = 0.0
+            tot_log_variational_posterior = 0.0
+            tot_acc = 0.0
+            tot_acc_start = 0.0
+            tot_acc_end = 0.0
+            tot_acc_bigram = 0.0
+            for (x , y , outs) in pbar:
+                # print(f"x shape {x.shape} , y shape {y.shape} , outs shape{outs.shape}"
+
+                x = torch.from_numpy(x).cuda()
+                y = torch.from_numpy(y).cuda()
+                outs = torch.from_numpy(outs).cuda()
+
+                optimizer.zero_grad()
+
+                pred = model(x)
+
+                if cfg.loss_head_only:
+                    pred_for_loss = pred[outs >= 2].permute(0 , 2 , 1)
+                    loss = F.nll_loss(pred_for_loss, y[outs >= 2] , reduction = "sum")
+                else:
+                    pred_for_loss = pred.permute(0 , 2 , 1)
+                    loss = F.nll_loss(pred_for_loss, y , reduction = "sum")
+
+                loss.backward()
+
+                optimizer.step()
+                # acc = (pred.argmax(-1)[outs >= 1] == y[outs >= 1]).float().mean().item()
+                # print(f"pred.shape : {pred.shape} , outs shape : {outs.shape} , y shape : {y.shape}")
+                # print(pred.argmax(-1)[: , -1] , y[: , -1])
+                # input()
+                acc = (pred.argmax(-1)[: , -1] == y[: , -1]).float().mean().item()
+                sl = 10
+                acc_start = (pred[:,:sl].argmax(-1)[outs[:,:sl] >= 1] == y[:,:sl][outs[:,:sl] >= 1]).float().mean().item()
+                el = 500
+                acc_end = (pred[:,-el:].argmax(-1)[outs[:,-el:] >= 2] == y[:,-el:][outs[:,-el:] >= 2]).float().mean().item()
+                acc_bigram = (pred.argmax(-1)[outs == 0] == y[outs == 0]).float().mean().item()
+
+
+                nb = cfg.max_iters
+                tot_nll += loss.item() / nb
+                tot_acc += acc / nb * 100
+                tot_acc_start += acc_start / nb * 100
+                tot_acc_end += acc_end / nb * 100
+                tot_acc_bigram += acc_bigram / nb * 100
+
+            run.log({'nll' : loss , 'acc(%)' : tot_acc,
+                    'acc_start(%)' : tot_acc_start , 'acc_end(%)' : tot_acc_end , 'acc_bigram(%)' : tot_acc_bigram})
+        
+    if cfg.pretrain:
         bayesian_model = to_bayesian(model , delta=0.1)
-        bayesian_model.load_state_dict(torch.load(cfg.load_dir))
-        print(f"Successfully loaded model from {cfg.load_dir}")
-        bayesian_model.cuda()
     else:
-        if cfg.pretrain:
-            for epoch in tqdm(range(100), desc="Epoch"):
-                pbar = tqdm(ParallelDataLoader(ds, batch_size=cfg.optim_args.batch_size,num_workers=cfg.num_data_workers, seed=cfg.seed , max_iters = cfg.max_iters), 
-                    total = cfg.max_iters, 
-                    desc = "Basic Transformer Training...")
-                tot_loss = 0.0
-                tot_nll = 0.0
-                tot_log_prior = 0.0
-                tot_log_variational_posterior = 0.0
-                tot_acc = 0.0
-                tot_acc_start = 0.0
-                tot_acc_end = 0.0
-                tot_acc_bigram = 0.0
-                for (x , y , outs) in pbar:
-                    # print(f"x shape {x.shape} , y shape {y.shape} , outs shape{outs.shape}"
-
-                    x = torch.from_numpy(x).cuda()
-                    y = torch.from_numpy(y).cuda()
-                    outs = torch.from_numpy(outs).cuda()
-
-                    optimizer.zero_grad()
-
-                    pred = model(x)
-
-                    if cfg.loss_head_only:
-                        pred_for_loss = pred[outs >= 2].permute(0 , 2 , 1)
-                        loss = F.nll_loss(pred_for_loss, y[outs >= 2] , reduction = "sum")
-                    else:
-                        pred_for_loss = pred.permute(0 , 2 , 1)
-                        loss = F.nll_loss(pred_for_loss, y , reduction = "sum")
-
-                    loss.backward()
-
-                    optimizer.step()
-                    # acc = (pred.argmax(-1)[outs >= 1] == y[outs >= 1]).float().mean().item()
-                    # print(f"pred.shape : {pred.shape} , outs shape : {outs.shape} , y shape : {y.shape}")
-                    # print(pred.argmax(-1)[: , -1] , y[: , -1])
-                    # input()
-                    acc = (pred.argmax(-1)[: , -1] == y[: , -1]).float().mean().item()
-                    sl = 10
-                    acc_start = (pred[:,:sl].argmax(-1)[outs[:,:sl] >= 1] == y[:,:sl][outs[:,:sl] >= 1]).float().mean().item()
-                    el = 500
-                    acc_end = (pred[:,-el:].argmax(-1)[outs[:,-el:] >= 2] == y[:,-el:][outs[:,-el:] >= 2]).float().mean().item()
-                    acc_bigram = (pred.argmax(-1)[outs == 0] == y[outs == 0]).float().mean().item()
-
-
-                    nb = cfg.max_iters
-                    tot_nll += loss.item() / nb
-                    tot_acc += acc / nb * 100
-                    tot_acc_start += acc_start / nb * 100
-                    tot_acc_end += acc_end / nb * 100
-                    tot_acc_bigram += acc_bigram / nb * 100
-
-                # run.log({'nll' : loss , 'acc(%)' : tot_acc,
-                #         'acc_start(%)' : tot_acc_start , 'acc_end(%)' : tot_acc_end , 'acc_bigram(%)' : tot_acc_bigram})
         bayesian_model = to_bayesian(model)
-        bayesian_model.cuda()
+
+    bayesian_model.cuda()
 
     for name, module in bayesian_model.named_modules():
         if isinstance(module , Gaussian) and name.endswith("weight"):
@@ -272,8 +271,8 @@ if __name__ == '__main__':
             acc_bigram = f"{tot_acc_bigram:.2f}%"
         )
         
-        # run.log({'loss' : tot_loss , 'nll' : tot_nll , 'log_prior' : tot_log_prior , 'log_variational_posterior' : tot_log_variational_posterior , 'acc(%)' : tot_acc,
-                #  'acc_start(%)' : tot_acc_start , 'acc_end(%)' : tot_acc_end , 'acc_bigram(%)' : tot_acc_bigram})
+        run.log({'loss' : tot_loss , 'nll' : tot_nll , 'log_prior' : tot_log_prior , 'log_variational_posterior' : tot_log_variational_posterior , 'acc(%)' : tot_acc,
+                 'acc_start(%)' : tot_acc_start , 'acc_end(%)' : tot_acc_end , 'acc_bigram(%)' : tot_acc_bigram})
     
     if cfg.save_model:
         torch.save(bayesian_model.state_dict(), Path(cfg.save_dir) / "basic_bayesian_transformer.pth")

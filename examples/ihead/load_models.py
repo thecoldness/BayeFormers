@@ -73,7 +73,7 @@ import powerlaw, numpy as np, matplotlib.pyplot as plt
 
 if __name__ == '__main__':
 
-    torch.cuda.set_device(2)
+    torch.cuda.set_device(1)
     args = TrainerArgs(
            optim_args=OptimArgs(),
            data_args=DataArgs(),
@@ -124,3 +124,43 @@ if __name__ == '__main__':
     bayesian_model.load_state_dict(torch.load(load_dir))
     print(f"Successfully loaded model from {load_dir}")
     bayesian_model.cuda()
+
+    for epoch in tqdm(range(10), desc="Epoch"):
+
+        tot_acc = 0.0
+        tot_acc_start = 0.0
+        tot_acc_end = 0.0
+        tot_acc_bigram = 0.0
+        pbar = tqdm(ParallelDataLoader(ds, batch_size=cfg.optim_args.batch_size,num_workers=cfg.num_data_workers, seed=cfg.seed , max_iters = cfg.max_iters),
+                    total = cfg.max_iters)
+        for (x , y , outs) in pbar:
+
+            x = torch.from_numpy(x).cuda()
+            y = torch.from_numpy(y).cuda()
+            outs = torch.from_numpy(outs).cuda()
+
+            SAMPLES = 10
+            predictions = torch.zeros(SAMPLES , cfg.optim_args.batch_size , *output_dim).cuda()
+
+            for s in range(SAMPLES):
+                pred = bayesian_model(x)
+                predictions[s] = pred
+            
+            predictions = predictions.mean(0)
+
+            # acc = (predictions.argmax(-1)[outs >= 1] == y[outs >= 1]).float().mean().item()
+            acc = (pred.argmax(-1)[: , -1] == y[: , -1]).float().mean().item()
+            print(f"tmp acc = {acc}")
+            sl = 10
+            acc_start = (predictions[:,:sl].argmax(-1)[outs[:,:sl] >= 1] == y[:,:sl][outs[:,:sl] >= 1]).float().mean().item()
+            el = 500
+            acc_end = (predictions[:,-el:].argmax(-1)[outs[:,-el:] >= 2] == y[:,-el:][outs[:,-el:] >= 2]).float().mean().item()
+            acc_bigram = (predictions.argmax(-1)[outs == 0] == y[outs == 0]).float().mean().item()
+
+            nb = cfg.max_iters
+            tot_acc += acc / nb * 100
+            tot_acc_start += acc_start / nb * 100
+            tot_acc_end += acc_end / nb * 100
+            tot_acc_bigram += acc_bigram / nb * 100
+
+            print(f"acc : {tot_acc}%")

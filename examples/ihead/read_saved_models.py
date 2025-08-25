@@ -226,20 +226,17 @@ if __name__ == '__main__':
     # outs_t = torch.from_numpy(out_test[:,:ds.seq_length]).cuda()
 
     # ----- Read trained model -----
-    bayesian_model = to_bayesian(model , delta=0.1)
+    bayesian_model = to_bayesian(model)
     matrix_mu = {}
     matrix_sigma = {}
 
     # for epoch in range(0 , EPOCHS , 100):
         # load_dir = cfg.load_dir + f"/basic_bayesian_transformer_epoch_{epoch}.pth"
     for epoch in range(0 , 1 , 100):
-        load_dir = cfg.load_dir + f"basic_bayesian_transformer.pth"
+        load_dir = cfg.load_dir + f"/basic_bayesian_transformer.pth"
         bayesian_model.load_state_dict(torch.load(load_dir))
         print(f"Successfully loaded model from {load_dir}")
         bayesian_model.cuda()
-
-        print(bayesian_model.bayesian_children)
-        print(bayesian_model.named_modules)
 
         for name, module in bayesian_model.named_modules():
             if isinstance(module , Gaussian) and name.endswith("weight"):
